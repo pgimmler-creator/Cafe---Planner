@@ -38,6 +38,7 @@
   .row{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px solid #eef0f2;}
   .row .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;} .row .pr{font-variant-numeric:tabular-nums;} .row .pr.tbd{color:#b0b6bc;}
   .total{display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-top:10px;padding-top:8px;border-top:2px solid #20262c;}
+  .row.sub{font-weight:600;border-top:1px solid #20262c;margin-top:6px;padding-top:6px;}
   .cnt{font-size:11px;color:var(--muted);margin-top:4px;text-align:right;}
   .projnote{font-size:11px;line-height:1.45;color:#8a5a00;background:#fff7e6;border:1px solid #e6c879;border-radius:6px;padding:8px 10px;margin-top:10px;}
   .readout{margin-top:10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:13px;} .readout b{color:var(--sel);}
@@ -109,9 +110,13 @@
     <aside class="costs">
       <h2>Equipment budget</h2>
       <div id="costlist"></div>
+      <div class="row sub"><span class="nm">Equipment subtotal</span><span class="pr" id="eqsub">$0.00</span></div>
+      <div class="row"><span class="nm">Freight</span><span class="pr" id="frt">$0.00</span></div>
+      <div class="row"><span class="nm">Installation</span><span class="pr" id="wgd">$0.00</span></div>
+      <div class="row"><span class="nm">Sales tax (8.25%)</span><span class="pr" id="tax">$0.00</span></div>
       <div class="total"><span>TOTAL</span><span id="grand">$0</span></div>
       <div class="cnt" id="pricedcnt"></div>
-      <div class="projnote"><strong>Note:</strong> these amounts are projections based on the rep's figures. A formal quote from the vendors is still pending.</div>
+      <div class="projnote"><strong>Pricing:</strong> Boelter's firm quote dated 10/09/2026, with freight, installation and 8.25% sales tax. Freight and installation are Boelter's quoted amounts for the four-piece layout. The panini grill (Option 2) is priced from TriMark. Electrical and construction work is not included; a quote from Ruppel is pending.</div>
     </aside>
   </div>
 
@@ -130,17 +135,18 @@
 const NS="http://www.w3.org/2000/svg";
 const svg=document.getElementById("svg");const readout=document.getElementById("readout");
 const BW=1050,BH=530;let W=BW,H=BH,view=0;const PXPI=4.0,M=6,GRID=12*4.0;
+const FREIGHT=1215.00,DELIVERY=2450.00,TAX_RATE=0.0825; // Boelter quote 10/09/2026
 const C={exist:["#cfd6dd","#59636d"],sink:["#cfe0ec","#3d6a89"],new:["#f6c667","#a76f18"]};
 const CATALOG={
   gng36:{n:"MERCHANDISER 36\u2033",w:36,h:34.4,c:"new",note:'Piper Grab-N-Go High Profile 36\u2033, 36\u2033W x 34\u215C\u2033D x 81\u00bd\u2033H'},
-  gng48:{n:"MERCHANDISER 48\u2033",w:48,h:34.4,c:"new",price:13315.01,note:'Piper Grab-N-Go High Profile 48\u2033, 48\u2033W x 34\u215C\u2033D x 81\u00bd\u2033H'},
+  gng48:{n:"MERCHANDISER 48\u2033",w:48,h:34.4,c:"new",price:13839.54,note:'Piper Grab-N-Go High Profile 48\u2033, 48\u2033W x 34\u215C\u2033D x 81\u00bd\u2033H'},
   pos:{n:"RDS",w:24,h:20,c:"exist",note:'Register / POS, ~24\u2033 x 20\u2033'},
-  pizza:{n:"SALAD PREP STATION 72\u2033",w:72,h:44,c:"new",price:16164.23,note:'Salad prep station, 72\u2033W x 44\u2033D'},
-  deli:{n:"DELI 48\u2033",w:48,h:44,c:"new",price:11626.07,note:'Deli prep station, 48\u2033W x 44\u2033D'},
-  panini:{n:"PANINI GRILL",w:24,h:15.63,c:"new",price:1319.52,note:'Option 2: Vollrath PSG4-DF208240 countertop panini grill, cast iron plates, 24\u2033W x 15.63\u2033D x 9.88\u2033H, 208-240V, 2,700-3,600 W, 13-15 A'},
-  oven:{n:"TURBO OVEN",w:16,h:27,c:"new",price:9322.73,note:'Midea G1 high-speed oven, ventless countertop'}
+  pizza:{n:"SALAD PREP STATION 72\u2033",w:72,h:44,c:"new",price:13760.02,note:'Salad prep station, 72\u2033W x 44\u2033D'},
+  deli:{n:"DELI 48\u2033",w:48,h:44,c:"new",price:9896.85,note:'Deli prep station, 48\u2033W x 44\u2033D'},
+  panini:{n:"PANINI GRILL",w:24,h:15.63,c:"new",price:1319.52,note:'Option 2: Vollrath PSG4-DF208240 countertop panini grill (priced from TriMark; not on the Boelter quote), cast iron plates, 24\u2033W x 15.63\u2033D x 9.88\u2033H, 208-240V, 2,700-3,600 W, 13-15 A'},
+  oven:{n:"TURBO OVEN",w:16,h:27,c:"new",price:7161.53,note:'Midea G1 high-speed oven, ventless countertop'}
 };
-const LAYOUT_A=[{"n": "MERCHANDISER 48\u2033", "w": 54, "h": 29, "c": "new", "price": 13315.01, "note": "Piper Grab-N-Go High Profile 48\u2033, 48\u2033W x 34\u215c\u2033D x 81\u00bd\u2033H", "cx": 352, "cy": 450, "rot": 189}, {"n": "DELI 48\u2033", "w": 53, "h": 24, "c": "new", "price": 11626.07, "note": "Deli prep station, 48\u2033W x 44\u2033D", "cx": 368, "cy": 344, "rot": 189}, {"n": "SALAD PREP STATION 72\u2033", "w": 53, "h": 29, "c": "new", "price": 16164.23, "note": "Salad prep station, 72\u2033W x 44\u2033D", "cx": 752, "cy": 337, "rot": 180}, {"n": "TURBO OVEN", "w": 16, "h": 27, "c": "new", "price": 9322.73, "note": "Midea G1 high-speed oven, ventless countertop", "cx": 416, "cy": 176, "rot": 0}];
+const LAYOUT_A=[{"n": "MERCHANDISER 48\u2033", "w": 54, "h": 29, "c": "new", "price": 13839.54, "note": "Piper Grab-N-Go High Profile 48\u2033, 48\u2033W x 34\u215c\u2033D x 81\u00bd\u2033H", "cx": 352, "cy": 450, "rot": 189}, {"n": "DELI 48\u2033", "w": 53, "h": 24, "c": "new", "price": 9896.85, "note": "Deli prep station, 48\u2033W x 44\u2033D", "cx": 368, "cy": 344, "rot": 189}, {"n": "SALAD PREP STATION 72\u2033", "w": 53, "h": 29, "c": "new", "price": 13760.02, "note": "Salad prep station, 72\u2033W x 44\u2033D", "cx": 752, "cy": 337, "rot": 180}, {"n": "TURBO OVEN", "w": 16, "h": 27, "c": "new", "price": 7161.53, "note": "Midea G1 high-speed oven, ventless countertop", "cx": 416, "cy": 176, "rot": 0}];
 let state=[],snap=2,selected=-1,layer=null,gridG=null,measOn=false,gridOn=false;
 try{const v=localStorage.getItem("cafeView3");if(v!==null&&!isNaN(+v))view=((+v)%4+4)%4;}catch(e){}
 // rotate an item k quarter-turns clockwise, starting in a canvas of size w x h
@@ -196,7 +202,10 @@ function renderCosts(){if(document.getElementById("opt1"))markHot();const list=d
   state.forEach(it=>{if(it.price>0){total+=it.price;priced++;}const row=document.createElement("div");row.className="row";
     const nm=document.createElement("span");nm.className="nm";nm.textContent=it.n;const pr=document.createElement("span");pr.className="pr"+(it.price>0?"":" tbd");
     pr.textContent=it.price>0?('$'+it.price.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})):"TBD";row.appendChild(nm);row.appendChild(pr);list.appendChild(row);});
-  document.getElementById("grand").textContent='$'+total.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});document.getElementById("pricedcnt").textContent=priced+" of "+state.length+" priced";}
+  const fm=v=>'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});const eq=Math.round(total*100)/100;
+  const frt=eq>0?FREIGHT:0,wgd=eq>0?DELIVERY:0,tax=Math.round((eq+frt+wgd)*TAX_RATE*100)/100,grand=Math.round((eq+frt+wgd+tax)*100)/100;
+  $("eqsub").textContent=fm(eq);$("frt").textContent=fm(frt);$("wgd").textContent=fm(wgd);$("tax").textContent=fm(tax);
+  document.getElementById("grand").textContent=fm(grand);document.getElementById("pricedcnt").textContent=priced+" of "+state.length+" priced";}
 function toSvg(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
 let drag=null,rotating=null,resizing=null,lastTap=0,tapItem=-1;
 svg.addEventListener("pointerdown",e=>{const sh=e.target.closest(".resize-handle");if(sh){resizing=+sh.dataset.i;selected=resizing;svg.setPointerCapture(e.pointerId);return;}
@@ -230,7 +239,9 @@ $("apply").onclick=()=>{if(selected<0){readout.textContent="Select a block first
 $("del").onclick=()=>{if(selected<0){readout.textContent="Select a block first.";return;}state.splice(selected,1);selected=-1;render();updateReadout();};
 // convert a layout saved against the previous backdrop (1000x904) onto the new image
 function oldToNew(o){const x=o.cy,y=1000-o.cx;return {...o,cx:Math.round(1.12674*x+0.0716*y+42.76),cy:Math.round(0.017754*x+0.91543*y-208.2),rot:((o.rot||0)+270)%360};}
-function fixPrices(arr){return arr.map(o=>(/^TURBO OVEN/.test(o.n)&&o.price===8698)?{...o,price:9322.73}:o);}
+const OLD_PRICES={"MERCHANDISER 48\u2033":[13315.01],"DELI 48\u2033":[11626.07],"SALAD PREP STATION 72\u2033":[16164.23],"TURBO OVEN":[8698,9322.73]};
+const NEW_PRICES={"MERCHANDISER 48\u2033":13839.54,"DELI 48\u2033":9896.85,"SALAD PREP STATION 72\u2033":13760.02,"TURBO OVEN":7161.53};
+function fixPrices(arr){return arr.map(o=>{const base=String(o.n||"").replace(/ #\d+$/,"");const old=OLD_PRICES[base];return (old&&old.indexOf(o.price)>=0)?{...o,price:NEW_PRICES[base]}:o;});}
 function parseLayout(v){return fixPrices(parseLayout0(v));}
 function parseLayout0(v){const d=typeof v==="string"?JSON.parse(v):v;if(Array.isArray(d))return d.map(oldToNew);if(d&&d.v===2&&Array.isArray(d.items))return d.items.map(o=>({...o,cx:o.cx-30,cy:o.cy-70}));if(d&&d.v===3&&Array.isArray(d.items))return d.items;throw 0;}
 function serialize(){return state.map(toBase).map(it=>({n:it.n,w:it.w,h:it.h,c:it.c,price:it.price,note:it.note,cx:it.cx,cy:it.cy,rot:it.rot}));}
